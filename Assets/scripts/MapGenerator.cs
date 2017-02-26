@@ -2,7 +2,7 @@
 
 public class MapGenerator : MonoBehaviour {
 
-    private const int MAP_CHUNK_SIZE = 241;
+    public const int MAP_CHUNK_SIZE = 241;
 
     public enum DrawMode {
         Noise,
