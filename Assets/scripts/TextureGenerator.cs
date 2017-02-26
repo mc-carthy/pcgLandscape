@@ -22,7 +22,7 @@ public static class TextureGenerator {
         {
             for (int y = 0; y < height; y++)
             {
-                colorMap [x * height + y] = Color.Lerp (Color.black, Color.white, heightMap [x, y]);
+                colorMap [y * width + x] = Color.Lerp (Color.black, Color.white, heightMap [x, y]);
             }
         }
         

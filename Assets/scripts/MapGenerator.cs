@@ -22,13 +22,16 @@ public class MapGenerator : MonoBehaviour {
     public int seed;
     public Vector2 offset;
 
+    public float meshHeightMultiplier;
+    public AnimationCurve meshHeightCurve;
+
     public bool autoUpdate;
 
     public TerrainType [] regions;
 
     public void GenerateMap ()
     {
-        float [,] noiseMap = Noise.GenerateNoiseMap (mapWidth, mapHeight, noiseScale, seed, octaves, persistance, lacunarity, offset);
+        float [,] noiseMap = Noise.GenerateNoiseMap (mapWidth, mapHeight, seed, noiseScale, octaves, persistance, lacunarity, offset);
 
         Color [] colorMap = new Color [mapWidth * mapHeight];
 
@@ -42,7 +45,7 @@ public class MapGenerator : MonoBehaviour {
                 {
                     if (currentHeight <= regions [i].height)
                     {
-                        colorMap [x * mapHeight + y] = regions [i].color;
+                        colorMap [y * mapWidth + x] = regions [i].color;
                         break;
                     }
                 }
@@ -60,7 +63,7 @@ public class MapGenerator : MonoBehaviour {
         }
         else if (drawMode == DrawMode.Mesh)
         {
-            display.DrawMesh (MeshGenerator.GenerateTerrainMesh (noiseMap), TextureGenerator.TextureFromColorMap (colorMap, mapWidth, mapHeight));
+            display.DrawMesh (MeshGenerator.GenerateTerrainMesh (noiseMap, meshHeightMultiplier, meshHeightCurve), TextureGenerator.TextureFromColorMap (colorMap, mapWidth, mapHeight));
         }
     }
 
