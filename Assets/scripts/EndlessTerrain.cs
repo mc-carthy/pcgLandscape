@@ -3,15 +3,19 @@ using System.Collections.Generic;
 
 public class EndlessTerrain : MonoBehaviour {
 
+    private const float VIEWER_MOVE_THRESHOLD_FOR_CHUNK_UPDATE = 25f;
+    private const float SQR_VIEWER_MOVE_THRESHOLD_FOR_CHUNK_UPDATE = VIEWER_MOVE_THRESHOLD_FOR_CHUNK_UPDATE * VIEWER_MOVE_THRESHOLD_FOR_CHUNK_UPDATE;
+
     private static MapGenerator mapGenerator;
     
     public LodInfo [] detailLevels;
-	public static float MAX_VIEW_DISTANCE;
+	public static float maxViewDistance;
 
     public Transform viewer;
     public Material mapMaterial;
 
     public static Vector2 viewerPosition;
+    private Vector2 viewerPositionOld;
 
     private int chunkSize;
     private int chunksVisibleInViewDistance;
@@ -22,15 +26,22 @@ public class EndlessTerrain : MonoBehaviour {
     private void Start ()
     {
         mapGenerator = FindObjectOfType<MapGenerator> ();
-        MAX_VIEW_DISTANCE = detailLevels [detailLevels.Length - 1].visibleDistThreshold;
+        maxViewDistance = detailLevels [detailLevels.Length - 1].visibleDistThreshold;
         chunkSize = MapGenerator.MAP_CHUNK_SIZE - 1;
-        chunksVisibleInViewDistance = Mathf.RoundToInt (MAX_VIEW_DISTANCE / chunkSize);
+        chunksVisibleInViewDistance = Mathf.RoundToInt (maxViewDistance / chunkSize);
+        
+        UpdateVisibleChunks ();
     }
 
     private void Update ()
     {
         viewerPosition = new Vector2 (viewer.position.x, viewer.position.z);
-        UpdateVisibleChunks ();
+
+        if ((viewerPositionOld - viewerPosition).sqrMagnitude > SQR_VIEWER_MOVE_THRESHOLD_FOR_CHUNK_UPDATE)
+        {
+            viewerPositionOld = viewerPosition;
+            UpdateVisibleChunks ();
+        }
     }
 
     private void UpdateVisibleChunks ()
@@ -104,7 +115,7 @@ public class EndlessTerrain : MonoBehaviour {
 
             for (int i = 0; i < detailLevels.Length; i++)
             {
-                lodMeshes [i] = new LODMesh (detailLevels [i].lod);
+                lodMeshes [i] = new LODMesh (detailLevels [i].lod, UpdateTerrainChunk);
             }
 
             mapGenerator.RequestMapData (OnMapDataReceived);
@@ -115,7 +126,7 @@ public class EndlessTerrain : MonoBehaviour {
             if (mapDataReceived)
             {
                 float viewerDistanceFromNearestEdge = Mathf.Sqrt (bounds.SqrDistance (viewerPosition));
-                bool isVisible = viewerDistanceFromNearestEdge <= MAX_VIEW_DISTANCE;
+                bool isVisible = viewerDistanceFromNearestEdge <= maxViewDistance;
 
                 if (isVisible)
                 {
@@ -165,6 +176,8 @@ public class EndlessTerrain : MonoBehaviour {
         {
             mapData = _mapData;
             mapDataReceived = true;
+
+            UpdateTerrainChunk ();
         }
 
 
@@ -176,16 +189,20 @@ public class EndlessTerrain : MonoBehaviour {
         public bool hasRequestedMesh;
         public bool hasMesh;
         private int lod;
+        System.Action updateCallback;
 
-        public LODMesh (int _lod)
+        public LODMesh (int _lod, System.Action _updateCallback)
         {
             lod = _lod;
+            updateCallback = _updateCallback;
         }
 
         public void RequestMesh (MapData mapData)
         {
             hasRequestedMesh = true;
             mapGenerator.RequestMeshData (mapData, lod, OnMeshDataReceived);
+
+            updateCallback ();
         }
 
         private void OnMeshDataReceived (MeshData meshData)
