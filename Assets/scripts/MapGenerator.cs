@@ -1,4 +1,7 @@
 ﻿using UnityEngine;
+using System;
+using System.Collections.Generic;
+using System.Threading;
 
 public class MapGenerator : MonoBehaviour {
 
@@ -32,6 +35,20 @@ public class MapGenerator : MonoBehaviour {
 
     public TerrainType [] regions;
 
+    private Queue<MapThreadInfo<MapData>> mapDataThreadInfoQueue = new Queue<MapThreadInfo<MapData>> ();
+
+    private void Update ()
+    {
+        if (mapDataThreadInfoQueue.Count > 0)
+        {
+            for (int i = 0; i < mapDataThreadInfoQueue.Count; i++)
+            {
+                MapThreadInfo<MapData> threadInfo = mapDataThreadInfoQueue.Dequeue ();
+                threadInfo.callback (threadInfo.parameter);
+            }
+        }
+    }
+
     public void DrawMapInEditor ()
     {
         MapData mapData = GenerateMapData ();
@@ -47,6 +64,24 @@ public class MapGenerator : MonoBehaviour {
         else if (drawMode == DrawMode.Mesh)
         {
             display.DrawMesh (MeshGenerator.GenerateTerrainMesh (mapData.heightMap, meshHeightMultiplier, meshHeightCurve, levelOfDetail), TextureGenerator.TextureFromColorMap (mapData.colorMap, MAP_CHUNK_SIZE, MAP_CHUNK_SIZE));
+        }
+    }
+
+    public void RequestMapData (Action<MapData> callback)
+    {
+        ThreadStart threadStart = delegate {
+            MapDataThread (callback);
+        };
+
+        new Thread (threadStart).Start ();
+    }
+
+    private void MapDataThread (Action<MapData> callback)
+    {
+        MapData mapData = GenerateMapData ();
+        lock (mapDataThreadInfoQueue)
+        {
+            mapDataThreadInfoQueue.Enqueue (new MapThreadInfo<MapData> (callback, mapData));
         }
     }
 
@@ -89,6 +124,17 @@ public class MapGenerator : MonoBehaviour {
         }
     }
 
+    struct MapThreadInfo<T> {
+        public readonly Action<T> callback;
+        public readonly T parameter;
+
+        public MapThreadInfo (Action<T> _callback, T _paramter)
+        {
+            callback = _callback;
+            parameter = _paramter;
+        }
+    }
+
 }
 
 [System.SerializableAttribute]
@@ -99,8 +145,8 @@ public struct TerrainType {
 }
 
 public struct MapData {
-    public float [,] heightMap;
-    public Color [] colorMap;
+    public readonly float [,] heightMap;
+    public readonly Color [] colorMap;
 
     public MapData (float [,] _heightMap, Color [] _colorMap)
     {

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 
 public class EndlessTerrain : MonoBehaviour {
 
+    private static MapGenerator mapGenerator;
+
 	public const float MAX_VIEW_DISTANCE = 450f;
     public Transform viewer;
 
@@ -16,6 +18,7 @@ public class EndlessTerrain : MonoBehaviour {
 
     private void Start ()
     {
+        mapGenerator = FindObjectOfType<MapGenerator> ();
         chunkSize = MapGenerator.MAP_CHUNK_SIZE - 1;
         chunksVisibleInViewDistance = Mathf.RoundToInt (MAX_VIEW_DISTANCE / chunkSize);
     }
@@ -77,6 +80,8 @@ public class EndlessTerrain : MonoBehaviour {
             meshObject.transform.localScale = Vector3.one * size / 10f;
             meshObject.transform.parent = parent;
             SetVisible (false);
+
+            mapGenerator.RequestMapData (OnMapDataReceived);
         }
 
         public void UpdateTerrainChunk ()
@@ -94,6 +99,11 @@ public class EndlessTerrain : MonoBehaviour {
         public bool IsVisible ()
         {
             return meshObject.activeSelf;
+        }
+
+        private void OnMapDataReceived (MapData mapData)
+        {
+            print ("Map data received");
         }
 
     }
