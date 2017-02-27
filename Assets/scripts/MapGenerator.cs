@@ -61,7 +61,7 @@ public class MapGenerator : MonoBehaviour {
 
     public void DrawMapInEditor ()
     {
-        MapData mapData = GenerateMapData ();
+        MapData mapData = GenerateMapData (Vector2.zero);
         MapDisplay display = FindObjectOfType<MapDisplay> ();
         if (drawMode == DrawMode.Noise)
         {
@@ -77,18 +77,18 @@ public class MapGenerator : MonoBehaviour {
         }
     }
 
-    public void RequestMapData (Action<MapData> callback)
+    public void RequestMapData (Vector2 centre, Action<MapData> callback)
     {
         ThreadStart threadStart = delegate {
-            MapDataThread (callback);
+            MapDataThread (centre, callback);
         };
 
         new Thread (threadStart).Start ();
     }
 
-    private void MapDataThread (Action<MapData> callback)
+    private void MapDataThread (Vector2 centre, Action<MapData> callback)
     {
-        MapData mapData = GenerateMapData ();
+        MapData mapData = GenerateMapData (centre);
         lock (mapDataThreadInfoQueue)
         {
             mapDataThreadInfoQueue.Enqueue (new MapThreadInfo<MapData> (callback, mapData));
@@ -113,9 +113,9 @@ public class MapGenerator : MonoBehaviour {
         }
     }
 
-    private MapData GenerateMapData ()
+    private MapData GenerateMapData (Vector2 centre)
     {
-        float [,] noiseMap = Noise.GenerateNoiseMap (MAP_CHUNK_SIZE, MAP_CHUNK_SIZE, seed, noiseScale, octaves, persistance, lacunarity, offset);
+        float [,] noiseMap = Noise.GenerateNoiseMap (MAP_CHUNK_SIZE, MAP_CHUNK_SIZE, seed, noiseScale, octaves, persistance, lacunarity, centre + offset);
 
         Color [] colorMap = new Color [MAP_CHUNK_SIZE * MAP_CHUNK_SIZE];
 
